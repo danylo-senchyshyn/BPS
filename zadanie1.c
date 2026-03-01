@@ -8,31 +8,20 @@
 #include <errno.h>
 
 static void die(void) {
-    // Presne podla zadania:
-    // Pri akejkoľvek chybe vypiste chyba.
     fputs("chyba", stdout);
     exit(1);
 }
 
-/*
-  FNV-1a 64-bit hash of password -> seed for PRNG
-  (simple, no external libs)
-*/
 static uint64_t fnv1a64(const unsigned char *s) {
     uint64_t h = 1469598103934665603ULL;
     while (*s) {
         h ^= (uint64_t)(*s++);
         h *= 1099511628211ULL;
     }
-    // avoid zero seed (xorshift would degenerate)
     if (h == 0) h = 0x9e3779b97f4a7c15ULL;
     return h;
 }
 
-/*
-  xorshift64* PRNG
-  returns 64-bit random, good enough for assignment (not for real crypto)
-*/
 static uint64_t xorshift64star(uint64_t *state) {
     uint64_t x = *state;
     x ^= x >> 12;
@@ -49,7 +38,6 @@ int main(int argc, char **argv) {
     const char *in_path = NULL;
     const char *out_path = NULL;
 
-    // parse args: -s -d -p <pass> -i <in> -o <out>
     while ((opt = getopt(argc, argv, "sdp:i:o:")) != -1) {
         switch (opt) {
             case 's': do_encrypt = 1; break;
@@ -61,10 +49,9 @@ int main(int argc, char **argv) {
         }
     }
 
-    // strict validation
     if ((do_encrypt + do_decrypt) != 1) die();
     if (!password || !in_path || !out_path) die();
-    if (optind != argc) die(); // no extra args
+    if (optind != argc) die();
 
     FILE *fin = fopen(in_path, "rb");
     if (!fin) die();
@@ -81,11 +68,9 @@ int main(int argc, char **argv) {
     size_t n;
 
     while ((n = fread(buf, 1, sizeof(buf), fin)) > 0) {
-        // XOR with keystream
         size_t i = 0;
         while (i < n) {
             uint64_t r = xorshift64star(&state);
-            // apply up to 8 bytes from r
             for (int k = 0; k < 8 && i < n; k++, i++) {
                 buf[i] ^= (unsigned char)((r >> (8 * k)) & 0xFF);
             }
@@ -110,6 +95,5 @@ int main(int argc, char **argv) {
     }
     if (fclose(fout) != 0) die();
 
-    // success: print nothing
     return 0;
 }
