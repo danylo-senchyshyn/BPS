@@ -1,0 +1,5 @@
+zadanie1
+*.bin
+*.txt
+cmake-build-debug/
+.idea/
